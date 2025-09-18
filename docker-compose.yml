@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # Servicio de desarrollo con hot reload
+  frontend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: pnpm run dev --host 0.0.0.0
+    networks:
+      - tidelit-network
+
+  # Servicio de producción
+  frontend-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - tidelit-network
+    profiles:
+      - production
+
+networks:
+  tidelit-network:
+    driver: bridge
