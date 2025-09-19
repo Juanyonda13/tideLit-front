@@ -1,5 +1,5 @@
 # Etapa de construcción
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -10,10 +10,17 @@ COPY package*.json pnpm-lock.yaml ./
 RUN npm install -g pnpm
 RUN pnpm install --frozen-lockfile
 
+# Configurar variables de entorno para resolver problemas de crypto
+ENV NODE_OPTIONS="--openssl-legacy-provider"
+
 # Copiar código fuente
 COPY . .
 
 # Construir la aplicación
+ARG VITE_API_BASE_URL=https://apitidelit.codecrafstudio.com
+ARG NODE_ENV=production
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV NODE_ENV=$NODE_ENV
 RUN pnpm run build
 
 # Etapa de producción

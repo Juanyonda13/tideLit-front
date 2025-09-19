@@ -1,10 +1,44 @@
-## Frontend (Vue 3 + Vite)
+## Frontend TideLit (Vue 3 + Vite + CI/CD)
 
-### Requisitos
-- Node 18+ / pnpm
-- Docker (opcional)
+### 🚀 Despliegue Automático con GitHub Actions
 
-### Desarrollo Local
+El proyecto ahora usa **CI/CD completamente automatizado** con GitHub Actions:
+
+- ✅ **Tests automáticos** en cada PR
+- ✅ **Build automático** en cada push
+- ✅ **Despliegue automático** a producción en `main/master`
+- ✅ **Health checks** post-despliegue
+
+### 📋 Requisitos
+- Node 20+ / pnpm
+- Docker (para desarrollo local)
+- GitHub Actions (configurado automáticamente)
+
+### 🔧 Configuración de Secrets en GitHub
+
+Para que funcione el despliegue automático, configura estos secrets en tu repositorio:
+
+```
+Settings → Secrets and variables → Actions → New repository secret
+```
+
+**Secrets necesarios:**
+- `SERVER_HOST`: IP del servidor (ej: 168.231.71.181)
+- `SERVER_USER`: Usuario SSH (ej: root)
+- `SERVER_SSH_KEY`: Clave privada SSH
+- `SERVER_PORT`: Puerto SSH (opcional, default: 22)
+
+### 🌐 Configuración de la API
+
+Docker maneja automáticamente las variables de entorno:
+
+- **Desarrollo**: `http://localhost:8000` (configurado en Dockerfile.dev)
+- **Producción**: `https://apitidelit.codecrafstudio.com` (configurado en Dockerfile)
+
+**Sin lógica condicional** - Docker define el entorno completo.
+
+### 💻 Desarrollo Local
+
 ```bash
 # Instalar dependencias
 pnpm install
@@ -14,28 +48,43 @@ pnpm run dev
 # Abre http://localhost:5173
 ```
 
-### Desarrollo con Docker
+### 🐳 Desarrollo con Docker
+
 ```bash
 # Desarrollo con hot reload
-docker-compose up frontend-dev
+docker-compose --profile development up tidelit-front-dev
 # Abre http://localhost:5173
 
 # Producción
-docker-compose --profile production up frontend-prod
-# Abre http://localhost:80
+docker-compose --profile production up tidelit-front-prod
+# Abre http://localhost:3000
 ```
 
-### Comandos Docker
+### 📊 Monitoreo del Despliegue
+
+1. **GitHub Actions**: Ve a la pestaña "Actions" en tu repositorio
+2. **Logs del servidor**: `ssh root@[IP] "docker logs tidelit-front-web"`
+3. **Estado de la app**: `curl http://[IP]:3000/health`
+
+### 🔄 Flujo de Trabajo
+
+1. **Desarrollo**: Trabaja en tu rama local
+2. **PR**: Crea un Pull Request → Se ejecutan tests automáticos
+3. **Merge**: Al hacer merge a `main` → Despliegue automático
+4. **Verificación**: Health check automático post-despliegue
+
+### 🚨 Rollback Manual (si es necesario)
+
 ```bash
-# Construir imagen de desarrollo
-docker build -f Dockerfile.dev -t tidelit-frontend-dev .
+# Conectar al servidor
+ssh root@[IP]
 
-# Construir imagen de producción
-docker build -t tidelit-frontend-prod .
+# Ver contenedores
+docker ps
 
-# Ejecutar contenedor de desarrollo
-docker run -p 5173:5173 -v $(pwd):/app tidelit-frontend-dev
+# Reiniciar contenedor
+docker restart tidelit-front-web
 
-# Ejecutar contenedor de producción
-docker run -p 80:80 tidelit-frontend-prod
+# Ver logs
+docker logs tidelit-front-web
 ```

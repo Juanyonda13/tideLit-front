@@ -1,11 +1,14 @@
 version: '3.8'
 
 services:
-  # Servicio de desarrollo con hot reload
-  frontend-dev:
+  # Servicio de desarrollo
+  tidelit-front-dev:
     build:
       context: .
       dockerfile: Dockerfile.dev
+      args:
+        VITE_API_BASE_URL: http://localhost:8000
+    container_name: tidelit-front-dev
     ports:
       - "5173:5173"
     volumes:
@@ -13,21 +16,35 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
-    command: pnpm run dev --host 0.0.0.0
     networks:
       - tidelit-network
+    profiles:
+      - development
 
   # Servicio de producción
-  frontend-prod:
+  tidelit-front-prod:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: https://apitidelit.codecrafstudio.com
+    container_name: tidelit-front-web
+    restart: unless-stopped
     ports:
-      - "80:80"
+      - "3000:80"
+    volumes:
+      - ./logs/nginx:/var/log/nginx
+      - ./ssl-certs:/etc/nginx/ssl
     environment:
       - NODE_ENV=production
     networks:
       - tidelit-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     profiles:
       - production
 

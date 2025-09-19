@@ -1,0 +1,60 @@
+name: 🧪 CI - Tests and Build
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8'
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔍 Run linting
+        run: |
+          if [ -f "package.json" ] && grep -q '"lint"' package.json; then
+            pnpm run lint
+          else
+            echo "No lint script found, skipping..."
+          fi
+
+      - name: 🧪 Run tests
+        run: |
+          if [ -f "package.json" ] && grep -q '"test"' package.json; then
+            pnpm run test
+          else
+            echo "No test script found, skipping..."
+          fi
+
+      - name: 🏗️ Build application
+        run: pnpm run build
+        env:
+          VITE_API_BASE_URL: https://apitidelit.codecrafstudio.com
+
+      - name: 📤 Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-files-${{ github.sha }}
+          path: dist/
+          retention-days: 7

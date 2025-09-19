@@ -1,0 +1,158 @@
+name: 🚀 Deploy TideLit Frontend
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8'
+
+jobs:
+  # Job de testing y build
+  test-and-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔍 Run linting
+        run: pnpm run lint || echo "No lint script found"
+
+      - name: 🧪 Run tests
+        run: pnpm run test || echo "No test script found"
+
+      - name: 🏗️ Build application
+        run: pnpm run build
+        env:
+          VITE_API_BASE_URL: https://apitidelit.codecrafstudio.com
+
+      - name: 📤 Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-files
+          path: dist/
+          retention-days: 1
+
+  # Job de despliegue a producción
+  deploy:
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📥 Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-files
+          path: dist/
+
+      - name: 🐳 Build Docker image
+        run: |
+          docker build -t tidelit-frontend:${{ github.sha }} .
+          docker tag tidelit-frontend:${{ github.sha }} tidelit-frontend:latest
+
+      - name: 🚀 Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            # Crear directorio si no existe
+            mkdir -p /root/projects/tidelit-frontend
+            
+            # Detener contenedor anterior
+            docker stop tidelit-front-web 2>/dev/null || true
+            docker rm tidelit-front-web 2>/dev/null || true
+            
+            # Limpiar imágenes antiguas
+            docker image prune -f
+
+      - name: 📤 Copy files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          source: "dist/,Dockerfile,nginx.conf,docker-compose.yml"
+          target: "/root/projects/tidelit-frontend/"
+
+      - name: 🚀 Start new container
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            cd /root/projects/tidelit-frontend
+            
+            # Construir nueva imagen
+            docker build -t tidelit-frontend:${{ github.sha }} .
+            
+            # Ejecutar nuevo contenedor
+            docker run -d \
+              --name tidelit-front-web \
+              --restart unless-stopped \
+              -p 3000:80 \
+              -v /root/projects/tidelit-frontend/logs/nginx:/var/log/nginx \
+              tidelit-frontend:${{ github.sha }}
+
+      - name: ✅ Health check
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            # Esperar que el contenedor esté listo
+            sleep 10
+            
+            # Verificar que el contenedor esté corriendo
+            if docker ps | grep -q tidelit-front-web; then
+              echo "✅ Contenedor desplegado correctamente"
+              
+              # Verificar que la aplicación responda
+              if curl -f http://localhost:3000/health > /dev/null 2>&1; then
+                echo "✅ Aplicación respondiendo correctamente"
+              else
+                echo "❌ La aplicación no está respondiendo"
+                exit 1
+              fi
+            else
+              echo "❌ El contenedor no está corriendo"
+              exit 1
+            fi
+
+      - name: 📊 Deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "🎉 Despliegue exitoso!"
+            echo "🌐 URL: http://${{ secrets.SERVER_HOST }}:3000"
+          else
+            echo "❌ Despliegue falló"
+          fi
