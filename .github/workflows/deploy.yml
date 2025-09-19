@@ -104,7 +104,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT || 22 }}
-          source: "dist/,Dockerfile,nginx.conf,docker-compose.yml,package.json,pnpm-lock.yaml"
+          source: "dist/,Dockerfile,nginx.conf,docker-compose.yml,package.json,pnpm-lock.yaml,tsconfig*.json,vite.config.ts,src/"
           target: "/root/projects/tidelit-frontend/"
 
       - name: 🚀 Start new container

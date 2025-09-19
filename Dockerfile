@@ -13,7 +13,7 @@ RUN pnpm install --frozen-lockfile
 # Configurar variables de entorno para resolver problemas de crypto
 ENV NODE_OPTIONS="--openssl-legacy-provider"
 
-# Copiar código fuente
+# Copiar código fuente y archivos de configuración
 COPY . .
 
 # Construir la aplicación
