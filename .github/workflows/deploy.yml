@@ -104,8 +104,9 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT || 22 }}
-          source: "dist/,Dockerfile,nginx.conf,docker-compose.yml,package.json,pnpm-lock.yaml,tsconfig*.json,vite.config.ts,src/"
+          source: "."
           target: "/root/projects/tidelit-frontend/"
+          strip_components: 0
 
       - name: 🚀 Start new container
         uses: appleboy/ssh-action@v1.0.3
