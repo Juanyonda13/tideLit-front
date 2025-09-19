@@ -104,7 +104,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT || 22 }}
-          source: "dist/,Dockerfile,nginx.conf,docker-compose.yml"
+          source: "dist/,Dockerfile,nginx.conf,docker-compose.yml,package.json,pnpm-lock.yaml"
           target: "/root/projects/tidelit-frontend/"
 
       - name: 🚀 Start new container
@@ -117,10 +117,19 @@ jobs:
           script: |
             cd /root/projects/tidelit-frontend
             
+            # Verificar que los archivos estén presentes
+            echo "Verificando archivos..."
+            ls -la
+            
+            # Crear directorio de logs si no existe
+            mkdir -p logs/nginx
+            
             # Construir nueva imagen
+            echo "Construyendo imagen Docker..."
             docker build -t tidelit-frontend:${{ github.sha }} .
             
             # Ejecutar nuevo contenedor
+            echo "Ejecutando nuevo contenedor..."
             docker run -d \
               --name tidelit-front-web \
               --restart unless-stopped \
