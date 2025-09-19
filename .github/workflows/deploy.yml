@@ -8,7 +8,7 @@ on:
 
 env:
   NODE_VERSION: '20'
-  PNPM_VERSION: '8'
+  PNPM_VERSION: '9'
 
 jobs:
   # Job de testing y build
@@ -30,7 +30,15 @@ jobs:
           version: ${{ env.PNPM_VERSION }}
 
       - name: 📦 Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          if [ -f "pnpm-lock.yaml" ]; then
+            pnpm install --frozen-lockfile
+          else
+            echo "No lockfile found, installing without frozen lockfile"
+            pnpm install
+          fi
+        env:
+          PNPM_CACHE_FOLDER: ~/.pnpm-cache
 
       - name: 🔍 Run linting
         run: pnpm run lint || echo "No lint script found"
