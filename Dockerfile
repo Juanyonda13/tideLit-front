@@ -32,8 +32,14 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Copiar configuración personalizada de nginx
 COPY nginx.conf /etc/nginx/nginx.conf
 
+# Crear directorio de logs
+RUN mkdir -p /var/log/nginx
+
 # Exponer puerto
 EXPOSE 80
+
+# Verificar que los archivos estén presentes
+RUN ls -la /usr/share/nginx/html/
 
 # Comando por defecto
 CMD ["nginx", "-g", "daemon off;"]

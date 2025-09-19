@@ -147,21 +147,40 @@ jobs:
           port: ${{ secrets.SERVER_PORT || 22 }}
           script: |
             # Esperar que el contenedor esté listo
-            sleep 10
+            sleep 15
+            
+            echo "🔍 Diagnóstico del contenedor..."
             
             # Verificar que el contenedor esté corriendo
             if docker ps | grep -q tidelit-front-web; then
               echo "✅ Contenedor desplegado correctamente"
               
+              # Ver logs del contenedor
+              echo "📋 Logs del contenedor:"
+              docker logs tidelit-front-web --tail 20
+              
+              # Verificar que nginx esté corriendo dentro del contenedor
+              echo "🔍 Verificando nginx dentro del contenedor..."
+              docker exec tidelit-front-web ps aux | grep nginx || echo "❌ nginx no está corriendo"
+              
+              # Verificar archivos en el contenedor
+              echo "📁 Archivos en el contenedor:"
+              docker exec tidelit-front-web ls -la /usr/share/nginx/html/
+              
               # Verificar que la aplicación responda
+              echo "🌐 Probando conectividad..."
               if curl -f http://localhost:3000/health > /dev/null 2>&1; then
                 echo "✅ Aplicación respondiendo correctamente"
               else
                 echo "❌ La aplicación no está respondiendo"
+                echo "🔍 Probando puerto interno..."
+                docker exec tidelit-front-web curl -f http://localhost/health || echo "❌ Error interno"
                 exit 1
               fi
             else
               echo "❌ El contenedor no está corriendo"
+              echo "📋 Contenedores disponibles:"
+              docker ps -a
               exit 1
             fi
 
