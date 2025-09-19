@@ -29,7 +29,13 @@ jobs:
           version: ${{ env.PNPM_VERSION }}
 
       - name: 📦 Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          if [ -f "pnpm-lock.yaml" ]; then
+            pnpm install --frozen-lockfile
+          else
+            echo "No lockfile found, installing without frozen lockfile"
+            pnpm install
+          fi
         env:
           PNPM_CACHE_FOLDER: ~/.pnpm-cache
 
